@@ -56,8 +56,13 @@
 
 /* External variables --------------------------------------------------------*/
 extern I2C_HandleTypeDef hi2c1;
+// Add extern definition for the RTC handle (defined in main.c)
 extern RTC_HandleTypeDef hrtc;
 extern UART_HandleTypeDef huart2;
+// Add extern for the global state variable (defined in state_machine.c)
+extern volatile SystemState_t g_current_state;
+// Add extern for the function that sets the wake timer end point (from Phase 3.3)
+extern uint32_t wake_end_tick;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -144,13 +149,19 @@ void SysTick_Handler(void)
 
 /**
   * @brief This function handles RTC global interrupt through EXTI lines 17, 19 and 20 and LSE CSS interrupt through EXTI line 19.
+  * (This is the required periodic wake up after the sleep interval)
   */
 void RTC_IRQHandler(void)
 {
   /* USER CODE BEGIN RTC_IRQn 0 */
 
   /* USER CODE END RTC_IRQn 0 */
+  // Must check and clear the RTC Wakeup Timer flag (No custom logic needed)
   HAL_RTCEx_WakeUpTimerIRQHandler(&hrtc);
+
+  // RTC Wakeup automatically handles the transition out of Stop Mode
+  // Execution returns to HAL_ResumeTick() in enter_sleep()
+
   /* USER CODE BEGIN RTC_IRQn 1 */
 
   /* USER CODE END RTC_IRQn 1 */
@@ -177,9 +188,23 @@ void EXTI4_15_IRQHandler(void)
   /* USER CODE BEGIN EXTI4_15_IRQn 0 */
 
   /* USER CODE END EXTI4_15_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+
   /* USER CODE BEGIN EXTI4_15_IRQn 1 */
 
+  // Check if the EXTI line for PC13 was the source
+  if (__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != 0)
+  {
+    // Only act if currently sleeping
+    if (g_current_state == STATE_SLEEP)
+    {
+      // Manually transition out of sleep
+      HAL_RTCEx_DeactivateWakeUpTimer(&hrtc); // Cancel the scheduled timer wake
+      // Execution returns to HAL_ResumeTick() in enter_sleep()
+    }
+
+    // Clear the EXTI pending bit (CRITICAL)
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);
+  }
   /* USER CODE END EXTI4_15_IRQn 1 */
 }
 
