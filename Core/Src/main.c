@@ -57,7 +57,8 @@ static void MX_I2C1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_RTC_Init(void);
 /* USER CODE BEGIN PFP */
-
+void persistence_init(void);
+uint8_t mpu6050_init(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -98,6 +99,10 @@ int main(void)
   MX_USART2_UART_Init();
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+
+  /* Initialize persist counter and MPU6050 */
+  persistence_init(); // Load wake count and timing intervals
+  mpu6050_init();     // Initialize the MPU6050
 
   /* USER CODE END 2 */
 
