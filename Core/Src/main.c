@@ -15,6 +15,7 @@
   *
   ******************************************************************************
   */
+#include <stdio.h>
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -45,6 +46,8 @@ I2C_HandleTypeDef hi2c1;
 RTC_HandleTypeDef hrtc;
 
 UART_HandleTypeDef huart2;
+
+uint32_t wake_end_tick;
 
 /* USER CODE BEGIN PV */
 
@@ -104,15 +107,40 @@ int main(void)
   persistence_init(); // Load wake count and timing intervals
   mpu6050_init();     // Initialize the MPU6050
 
+  // On power-up/reset, enter Wake state.
+  g_current_state = STATE_WAKE;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
+
+  // --- Main State Machine Loop ---
+  wake_end_tick = HAL_GetTick() + (g_awake_interval_s * 1000);
+
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  switch (g_current_state) {
+		  case STATE_WAKE:
+			  handle_wake_state();
+
+			  // Check for auto-sleep timer expiry
+			  if (HAL_GetTick() >= wake_end_tick) {
+				  // This handles the initial 10s auto-sleep and the periodic sleep
+				  printf("Awake interval elapsed. Entering Sleep.\r\n");
+				  enter_sleep();
+			  }
+			  break;
+
+		  case STATE_SLEEP:
+			  // Nothing happens here in Run mode; the MCU is already sleeping.
+			  // We just loop until an interrupt wakes us.
+			  HAL_Delay(10); // A tiny delay to prevent hard-looping if state is somehow stuck
+			  break;
+	  }
   }
   /* USER CODE END 3 */
 }
