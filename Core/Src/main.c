@@ -16,9 +16,11 @@
   ******************************************************************************
   */
 #include <stdio.h>
+#include <ctype.h>
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "uart_command.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -371,6 +373,37 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+/**
+  * @brief UART Receive Complete Callback: Called after every single byte is received.
+  * @param huart: UART handle structure
+  */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    static uint8_t buffer_index = 0;
+
+    if (huart->Instance == huart2.Instance) {
+
+        // 1. Check for command termination (Newline '\n' or Carriage Return '\r')
+        if (g_rx_byte == '\r' || g_rx_byte == '\n') {
+            if (buffer_index > 0) {
+                g_command_buffer[buffer_index] = '\0'; // Null-terminate the string
+                g_command_ready_flag = 1;              // Signal main loop to process
+            }
+            buffer_index = 0; // Reset index for the next command
+        }
+        // 2. Process incoming character
+        else if (buffer_index < MAX_COMMAND_LENGTH) {
+            // Convert to lowercase for case-insensitive matching
+            g_command_buffer[buffer_index++] = tolower(g_rx_byte);
+        } else {
+            // Overflow: Reset buffer and ignore the command
+            buffer_index = 0;
+        }
+
+        // 3. Restart the interrupt for the next byte (CRITICAL)
+        HAL_UART_Receive_IT(&huart2, (uint8_t*)&g_rx_byte, 1);
+    }
+}
 
 /* USER CODE END 4 */
 

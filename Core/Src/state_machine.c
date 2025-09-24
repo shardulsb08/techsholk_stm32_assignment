@@ -1,4 +1,5 @@
-#include"state_machine.h"
+#include "state_machine.h"
+#include "uart_command.h"
 #include <stdio.h>
 
 // Define the global state and timing variables (must be 'extern' in the header)
@@ -45,8 +46,8 @@ void handle_wake_state(void) {
 
     // --- Continuous Actions ---
     handle_led_blink(); // §5: Blink LED
-    // Check for serial commands (Parsing handled in Phase 4)
-    // ... 
+    // Check for serial commands
+    handle_serial_input();
 }
 
 /**

@@ -7,5 +7,5 @@
 #define INITIAL_BOOT_MARKER 0xCAFEFEED // A unique value to detect the first boot
 extern volatile uint32_t g_wake_count;
 void increment_wake_count(void);
-
+void write_backup_register(uint32_t bkp_reg, uint32_t value);
 #endif // __PERSISTENCE_H
